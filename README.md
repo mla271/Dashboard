@@ -18,8 +18,6 @@ Un tableau de bord en **HTML** avec deux modes d’utilisation : **Utilisateur**
 
 Les tuiles sont exportées au format **`.json`**.
 
-##
-**Ce dashboard à été créer a l'aide de ChatGPT**
 
 ### ➤ Exporter
 1. Ouvrez le menu d’administration.  
@@ -31,4 +29,8 @@ Les tuiles sont exportées au format **`.json`**.
 2. Ouvrez le fichier `.json` exporté précédemment.  
 3. **Copiez le contenu** du fichier.  
 4. **Collez-le** dans le champ prévu à cet effet dans le menu d’import.  
-5. Validez pour restaurer vos tuiles.  
+5. Validez pour restaurer vos tuiles.
+
+
+##
+* **Ce dashboard à été créer a l'aide de ChatGPT** *
