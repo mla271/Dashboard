@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard</title>
+  <style>
+    :root{--bg:#0b1220;--card:#0f1724;--text:#e6eef6;--muted:#94a3b8;--accent:#06b6d4;--ok:#10b981}
+    [data-theme="light"]{--bg:#f7fafc;--card:#fff;--text:#111827;--muted:#6b7280;--accent:#0284c7;--ok:#047857}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial}
+    .wrap{max-width:1100px;margin:20px auto;padding:18px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    h1{margin:0;font-size:20px}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .controls input[type=text]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:var(--card);color:var(--text)}
+    .btn{padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+    .btn-primary{background:var(--accent);color:#042027}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    .toolbar-right{display:flex;gap:8px;align-items:center}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:18px}
+    .tile{background:var(--card);padding:12px;border-radius:10px;text-align:center;box-shadow:0 4px 14px rgba(2,6,23,0.6)}
+    .tile .icon{height:48px;width:48px;margin:0 auto 8px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:26px}
+    .tile img{max-width:48px;max-height:48px;border-radius:8px;margin-bottom:8px}
+    .tile .name{font-weight:700;margin-bottom:6px}
+    .tile .url{font-size:12px;color:var(--muted);word-break:break-word;margin-bottom:8px}
+    .tile .actions{display:flex;gap:6px;justify-content:center}
+    .hint{font-size:13px;color:var(--muted);margin-top:10px}
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+    /* admin badges */
+    .admin-badge{font-size:12px;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.04);color:var(--muted)}
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center}
+    .modal{background:var(--card);padding:16px;border-radius:10px;min-width:320px;max-width:90%}
+    .form-row{display:flex;gap:8px;margin-bottom:8px}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+    .small{font-size:13px;color:var(--muted)}
+  </style>
+</head>
+<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/8899/8899687.png">
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Dashboard</h1>
+        <div class="small">Tableau de bord local — mode <span id="modeLabel">User</span></div>
+      </div>
+
+      <div class="toolbar-right">
+        <button id="themeBtn" class="btn btn-ghost">🌙/☀️ Thème</button>
+        <button id="toggleAdmin" class="btn btn-ghost">Passer en Admin</button>
+      </div>
+    </header>
+
+    <div class="controls" id="adminControls" style="display:none;">
+      <input id="nameInput" type="text" placeholder="Nom (ex: Routeur)" />
+      <input id="urlInput" type="text" placeholder="URL (ex: http://192.168.1.1)" style="flex:1" />
+      <input id="iconInput" type="text" placeholder="Icône (emoji ou URL image)" style="width:200px" />
+      <button id="addBtn" class="btn btn-primary">Ajouter</button>
+      <button id="importBtn" class="btn btn-ghost">Importer</button>
+      <button id="exportBtn" class="btn btn-ghost">Exporter</button>
+      <button id="clearBtn" class="btn btn-ghost">Effacer</button>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+  </div>
+
+  <!-- Modal template -->
+  <template id="modalTpl">
+    <div class="modal-backdrop">
+      <div class="modal">
+        <h3 id="modalTitle">Éditer</h3>
+        <div>
+          <label>Nom</label>
+          <input id="m_name" type="text" />
+        </div>
+        <div>
+          <label>URL</label>
+          <input id="m_url" type="text" />
+        </div>
+        <div>
+          <label>Icône (emoji ou URL)</label>
+          <input id="m_icon" type="text" />
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+          <button id="m_cancel" class="btn btn-ghost">Annuler</button>
+          <button id="m_save" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    const STORAGE_KEY = 'heimdall_items_v2';
+    let items = loadItems();
+    let adminMode = false;
+
+    // DOM
+    const grid = document.getElementById('grid');
+    const addBtn = document.getElementById('addBtn');
+    const nameInput = document.getElementById('nameInput');
+    const urlInput = document.getElementById('urlInput');
+    const iconInput = document.getElementById('iconInput');
+    const adminControls = document.getElementById('adminControls');
+    const toggleAdmin = document.getElementById('toggleAdmin');
+    const modeLabel = document.getElementById('modeLabel');
+    const themeBtn = document.getElementById('themeBtn');
+    const importBtn = document.getElementById('importBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    function loadItems(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }catch(e){ return []; } }
+    function saveItems(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+
+    function render(){
+      grid.innerHTML = '';
+      if(items.length === 0){ grid.innerHTML = '<div class="small">Aucun élément — passe en Admin pour en ajouter.</div>'; return }
+
+      items.forEach((it, idx) => {
+        const el = document.createElement('div'); el.className = 'tile';
+        // icon
+        let iconHTML = '';
+        if(it.icon){
+          if(/^https?:\/\//i.test(it.icon)){
+            iconHTML = `<img src="${escapeHtml(it.icon)}" alt="icon" onerror="this.style.display='none'">`;
+          } else {
+            iconHTML = `<div class="icon">${escapeHtml(it.icon)}</div>`;
+          }
+        } else {
+          iconHTML = `<div class="icon">🔗</div>`;
+        }
+
+        el.innerHTML = `
+          ${iconHTML}
+          <div class="name">${escapeHtml(it.name)}</div>
+          <div class="url">${escapeHtml(it.url)}</div>
+          <div class="actions"></div>
+        `;
+
+        const actions = el.querySelector('.actions');
+        const openBtn = document.createElement('button'); openBtn.className = 'btn btn-primary'; openBtn.textContent = 'Ouvrir';
+        openBtn.addEventListener('click', ()=>{ window.open(normalizeUrl(it.url),'_blank') });
+        actions.appendChild(openBtn);
+
+        if(adminMode){
+          const editBtn = document.createElement('button'); editBtn.className = 'btn btn-ghost'; editBtn.textContent = '✏️ Éditer';
+          editBtn.addEventListener('click', ()=> openEditModal(idx));
+          const delBtn = document.createElement('button'); delBtn.className = 'btn btn-ghost'; delBtn.textContent = '🗑️ Supprimer';
+          delBtn.addEventListener('click', ()=>{ if(confirm('Supprimer "'+it.name+'" ?')){ items.splice(idx,1); saveItems(); render(); } });
+          actions.appendChild(editBtn); actions.appendChild(delBtn);
+        }
+
+        grid.appendChild(el);
+      });
+    }
+
+    function escapeHtml(str){ return String(str).replace(/[&<>"']/g, (s)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+
+    function normalizeUrl(u){ try{ const t = u.trim(); if(/^https?:\/\//i.test(t)) return t; return 'http://'+t; }catch(e){ return u } }
+
+    // Admin toggle
+    toggleAdmin.addEventListener('click', ()=>{
+      adminMode = !adminMode;
+      adminControls.style.display = adminMode ? 'flex' : 'none';
+      toggleAdmin.textContent = adminMode ? 'Passer en User' : 'Passer en Admin';
+      modeLabel.textContent = adminMode ? 'Admin' : 'User';
+      render();
+    });
+
+    // Theme
+    themeBtn.addEventListener('click', ()=>{
+      const html = document.documentElement;
+      const cur = html.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      const next = cur === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('heimdall_theme', next);
+    });
+    // load saved theme
+    (function(){ const t = localStorage.getItem('heimdall_theme') || 'dark'; document.documentElement.setAttribute('data-theme', t); })();
+
+    // Add
+    addBtn.addEventListener('click', ()=>{
+      const name = nameInput.value.trim(); const url = urlInput.value.trim(); const icon = iconInput.value.trim();
+      if(!name || !url){ alert('Nom et URL requis'); return }
+      items.push({name, url: normalizeUrl(url), icon}); saveItems(); render(); nameInput.value=''; urlInput.value=''; iconInput.value='';
+    });
+
+    // Import/Export
+    exportBtn.addEventListener('click', ()=>{
+      const dataStr = JSON.stringify(items, null, 2);
+      const blob = new Blob([dataStr], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'heimdall_items.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),2000);
+    });
+    importBtn.addEventListener('click', ()=>{
+      const txt = prompt('Colle le JSON des éléments à importer (remplace l\'existant)');
+      if(!txt) return; try{ const arr = JSON.parse(txt); if(!Array.isArray(arr)) throw 0; items = arr; saveItems(); render(); alert('Import OK'); }catch(e){ alert('JSON invalide') }
+    });
+
+    clearBtn.addEventListener('click', ()=>{ if(confirm('Effacer tous les éléments ?')){ items=[]; saveItems(); render(); } });
+
+    // Modal edit
+    function openEditModal(idx){
+      const tpl = document.getElementById('modalTpl'); const node = tpl.content.cloneNode(true);
+      const backdrop = node.querySelector('.modal-backdrop');
+      const m_name = node.getElementById('m_name');
+      const m_url = node.getElementById('m_url');
+      const m_icon = node.getElementById('m_icon');
+      const m_cancel = node.getElementById('m_cancel');
+      const m_save = node.getElementById('m_save');
+
+      m_name.value = items[idx].name; m_url.value = items[idx].url; m_icon.value = items[idx].icon || '';
+
+      m_cancel.addEventListener('click', ()=>{ document.body.removeChild(backdrop); });
+      m_save.addEventListener('click', ()=>{
+        const name = m_name.value.trim(); const url = m_url.value.trim(); const icon = m_icon.value.trim();
+        if(!name || !url){ alert('Nom et URL requis'); return }
+        items[idx] = {name, url: normalizeUrl(url), icon}; saveItems(); render(); document.body.removeChild(backdrop);
+      });
+
+      // clicking backdrop closes
+      backdrop.addEventListener('click', (e)=>{ if(e.target === backdrop) document.body.removeChild(backdrop); });
+
+      document.body.appendChild(backdrop);
+    }
+
+    // initial render
+    render();
+
+    // Expose for debug
+    window._heimdall = {items, saveItems, render};
+  </script>
+</body>
+</html>
