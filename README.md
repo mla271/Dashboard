@@ -33,4 +33,4 @@ Les tuiles sont exportées au format **`.json`**.
 
 
 ##
-* **Ce dashboard à été créer a l'aide de ChatGPT** *
+**Ce dashboard à été créer a l'aide de ChatGPT**
