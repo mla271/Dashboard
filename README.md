@@ -34,3 +34,8 @@ Les tuiles sont exportées au format **`.json`**.
 
 ##
 **Ce dashboard à été créer a l'aide de ChatGPT**
+
+<img width="1433" height="705" alt="image" src="https://github.com/user-attachments/assets/aede2713-c2b6-491d-bc1b-8a385d4561b6" />
+<img width="1436" height="705" alt="image" src="https://github.com/user-attachments/assets/7004f615-27c3-4181-bbdf-183e7bdc319b" />
+
+
